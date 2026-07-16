@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grand Vista Hotel — Front Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root {
+    --ink: #0e2426;
+    --teal: #133639;
+    --teal-light: #1e4b4f;
+    --brass: #c9a227;
+    --brass-light: #e3c568;
+    --ivory: #f3ede0;
+    --wine: #7a2331;
+    --sage: #6f9482;
+    --slate: #6b7680;
+    --dusty-blue: #5c7f96;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ink); color: var(--ivory);
+    font-family: 'Work Sans', sans-serif; min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 28px 32px 22px; border-bottom: 1px solid rgba(201,162,39,0.35);
+    text-align: center; background: linear-gradient(180deg, var(--teal), var(--ink));
+  }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: 4px; text-transform: uppercase; color: var(--brass-light); margin-bottom: 6px;
+  }
+  h1 { font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 40px; letter-spacing: 1px; }
+  .tagline { font-size: 12.5px; color: rgba(243,237,224,0.6); margin-top: 6px; }
+  .connection-badge {
+    display: inline-block; font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; padding: 3px 10px;
+    border-radius: 20px; margin-top: 8px;
+    border: 1px solid rgba(111,148,130,0.4); color: var(--sage);
+  }
+  .connection-badge.offline { border-color: rgba(122,35,49,0.5); color: #e3a9b0; }
+
+  /* ── Nav ── */
+  nav {
+    display: flex; justify-content: center; gap: 4px; flex-wrap: wrap;
+    padding: 16px 20px; background: var(--teal);
+    border-bottom: 1px solid rgba(201,162,39,0.25);
+  }
+  .tab {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.5px;
+    background: transparent; border: 1px solid transparent;
+    color: rgba(243,237,224,0.65); padding: 9px 16px; cursor: pointer;
+    border-radius: 3px; transition: all 0.15s;
+  }
+  .tab:hover { color: var(--ivory); }
+  .tab.active { background: rgba(201,162,39,0.12); border-color: var(--brass); color: var(--brass-light); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn .2s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  .panel-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; color: var(--brass-light); margin-bottom: 4px; }
+  .panel-sub { font-size: 12.5px; color: rgba(243,237,224,0.55); margin-bottom: 22px; }
+
+  /* ── Filters ── */
+  .filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .filter-btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;
+    padding: 7px 14px; border-radius: 20px;
+    border: 1px solid rgba(243,237,224,0.25); background: transparent;
+    color: rgba(243,237,224,0.7); cursor: pointer; transition: all .15s;
+  }
+  .filter-btn.active { background: var(--brass); color: var(--ink); border-color: var(--brass); font-weight: 600; }
+  .search-filter {
+    display: flex; align-items: center; gap: 8px; margin-left: auto;
+    background: rgba(0,0,0,0.2); border: 1px solid rgba(243,237,224,0.2);
+    border-radius: 20px; padding: 0 12px;
+  }
+  .search-filter i { color: rgba(243,237,224,0.4); font-size: 12px; }
+  .search-filter input {
+    background: transparent; border: none; color: var(--ivory);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    padding: 7px 0; width: 140px; outline: none;
+  }
+  .search-filter input::placeholder { color: rgba(243,237,224,0.35); }
+
+  /* ── Rooms grid ── */
+  .floor-block { margin-bottom: 26px; }
+  .floor-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--brass); margin-bottom: 10px;
+  }
+  .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+  .room-card {
+    border: 1px solid rgba(243,237,224,0.15); border-radius: 4px;
+    padding: 8px 6px; text-align: center; background: rgba(255,255,255,0.02);
+    cursor: pointer; transition: all .15s; position: relative;
+  }
+  .room-card:hover { transform: translateY(-2px); border-color: var(--brass); }
+  .room-card.occupied { background: rgba(122,35,49,0.25); border-color: var(--wine); }
+  .room-card.available { border-color: rgba(111,148,130,0.4); }
+  .room-num { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; }
+  .room-cat { font-size: 9.5px; margin-top: 2px; letter-spacing: 0.5px; opacity: 0.8; }
+  .room-price { font-size: 9px; margin-top: 2px; color: var(--brass-light); opacity: 0.7; }
+  .room-guest { font-size: 8.5px; margin-top: 2px; color: #e3a9b0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+  .dot.Single{background:var(--sage);} .dot.Double{background:var(--brass);} .dot.Family{background:var(--dusty-blue);} .dot.Elite{background:var(--wine);} .dot.Meeting{background:var(--slate);}
+  .legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; font-size:11.5px; color:rgba(243,237,224,0.7);}
+
+  /* ── Room detail tooltip ── */
+  .room-detail-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    align-items: center; justify-content: center; padding: 20px; z-index: 20;
+  }
+  .room-detail-overlay.show { display: flex; }
+  .room-detail-card {
+    background: var(--teal); border: 1px solid rgba(201,162,39,0.4);
+    border-radius: 8px; padding: 28px; max-width: 380px; width: 100%;
+  }
+  .room-detail-card h3 { font-family: 'Cormorant Garamond', serif; font-size: 24px; color: var(--brass-light); margin-bottom: 14px; }
+  .room-detail-card .detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(243,237,224,0.08); font-size: 13px; }
+  .room-detail-card .detail-row .label { color: rgba(243,237,224,0.55); }
+  .room-detail-card .actions { display: flex; gap: 10px; margin-top: 18px; }
+
+  /* ── Forms ── */
+  .form-card {
+    background: var(--teal); border: 1px solid rgba(201,162,39,0.3);
+    border-radius: 6px; padding: 24px; max-width: 480px;
+  }
+  .field { margin-bottom: 14px; display:flex; flex-direction:column; gap:5px; }
+  .field label { font-size: 11.5px; letter-spacing: 0.5px; color: var(--brass-light); text-transform: uppercase; }
+  .field input, .field select {
+    font-family: 'Work Sans', sans-serif; background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(243,237,224,0.25); color: var(--ivory);
+    padding: 9px 10px; border-radius: 3px; font-size: 14px; transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--brass); }
+  .btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; letter-spacing: 0.5px;
+    background: var(--brass); color: var(--ink); border: none;
+    padding: 11px 20px; border-radius: 3px; cursor: pointer; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+  }
+  .btn:hover { background: var(--brass-light); }
+  .btn:active { transform: scale(0.97); }
+  .btn.secondary { background: transparent; border: 1px solid var(--brass); color: var(--brass-light); }
+  .btn.secondary:hover { background: rgba(201,162,39,0.1); }
+  .btn.danger { background: var(--wine); color: #fff; }
+  .btn.danger:hover { background: #942d3e; }
+  .btn.small { padding: 7px 12px; font-size: 11px; }
+
+  .msg { margin-top: 14px; font-size: 13px; padding: 10px 12px; border-radius: 4px; }
+  .msg.ok { background: rgba(111,148,130,0.15); border: 1px solid var(--sage); color: #b7d6c4; }
+  .msg.err { background: rgba(122,35,49,0.2); border: 1px solid var(--wine); color: #e3a9b0; }
+
+  /* ── Restaurant ── */
+  .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+  .menu-item-card {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(243,237,224,0.12);
+    padding: 10px 12px; border-radius: 3px; font-size: 12.5px; transition: border-color .15s;
+  }
+  .menu-item-card:hover { border-color: rgba(201,162,39,0.4); }
+  .menu-item-card .item-name { font-weight: 500; }
+  .menu-item-card .item-price { color: var(--brass-light); font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .menu-item-card button {
+    font-family:'IBM Plex Mono',monospace; font-size:11px; background: var(--teal-light);
+    color: var(--brass-light); border:1px solid var(--brass); border-radius:3px;
+    padding:4px 10px; cursor:pointer; transition: all .15s;
+  }
+  .menu-item-card button:hover { background: var(--brass); color: var(--ink); }
+  .order-list { list-style: none; padding: 0; margin: 14px 0; font-size: 13px; }
+  .order-list li { display:flex; justify-content:space-between; padding: 6px 0; border-bottom: 1px dashed rgba(243,237,224,0.15); }
+  .order-list li:last-child { border-bottom: none; font-weight: 600; color: var(--brass-light); }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; padding: 8px 10px; color: var(--brass-light);
+    font-family:'IBM Plex Mono',monospace; font-size: 10.5px; letter-spacing: 1px;
+    text-transform: uppercase; border-bottom: 2px solid rgba(201,162,39,0.4);
+  }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid rgba(243,237,224,0.08); }
+  tbody tr:hover td { background: rgba(201,162,39,0.04); }
+
+  /* ── Summary ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--teal); border: 1px solid rgba(201,162,39,0.3);
+    border-radius: 6px; padding: 18px; text-align: center;
+    transition: transform .2s, border-color .2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); border-color: var(--brass); }
+  .stat-num { font-family: 'Cormorant Garamond', serif; font-size: 34px; color: var(--brass-light); font-weight: 700; }
+  .stat-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: rgba(243,237,224,0.6); margin-top: 4px; }
+
+  /* ── Receipt modal ── */
+  .overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    align-items: center; justify-content: center; padding: 20px; z-index: 10;
+  }
+  .overlay.show { display: flex; }
+  .receipt {
+    background: var(--ivory); color: var(--ink); max-width: 420px; width: 100%;
+    border-radius: 6px; padding: 26px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .receipt h2 { font-family: 'Cormorant Garamond', serif; font-size: 22px; margin: 0 0 4px; }
+  .receipt hr { border: none; border-top: 1px dashed #999; margin: 10px 0; }
+  .receipt .line { display: flex; justify-content: space-between; margin: 4px 0; }
+  .receipt .total { font-weight: 700; font-size: 15px; margin-top: 8px; }
+  .receipt .close-btn { margin-top: 18px; width: 100%; }
+  .receipt .print-btn { margin-top: 8px; width: 100%; background: transparent; border: 1px solid #666; color: #333; }
+
+  /* ── Toast ── */
+  .toast-wrap { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    padding: 12px 20px; border-radius: 4px; font-size: 13px; font-weight: 500;
+    background: var(--ivory); color: var(--ink); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: toastIn .25s ease; display: flex; align-items: center; gap: 8px;
+  }
+  .toast.error { background: var(--wine); color: #fff; }
+  .toast.success { background: var(--sage); color: var(--ink); }
+  @keyframes toastIn { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 28px; }
+    header { padding: 20px 16px 16px; }
+    .menu-grid { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .search-filter { margin-left: 0; width: 100%; }
+    .search-filter input { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Front Desk Console</p>
+  <h1><i class="fa-solid fa-hotel" style="font-size:34px;margin-right:8px;opacity:0.6;"></i>Grand Vista Hotel</h1>
+  <p class="tagline">100 rooms &middot; 5 floors &middot; 5 room categories</p>
+  <div class="connection-badge" id="connBadge">LOCAL MODE</div>
+</header>
+
+<nav id="mainNav">
+  <button class="tab active" data-panel="rooms"><i class="fa-solid fa-door-open"></i> Rooms</button>
+  <button class="tab" data-panel="checkin"><i class="fa-solid fa-right-to-bracket"></i> Check-In</button>
+  <button class="tab" data-panel="checkout"><i class="fa-solid fa-right-from-bracket"></i> Check-Out</button>
+  <button class="tab" data-panel="restaurant"><i class="fa-solid fa-utensils"></i> Restaurant</button>
+  <button class="tab" data-panel="registry"><i class="fa-solid fa-book"></i> Registry</button>
+  <button class="tab" data-panel="summary"><i class="fa-solid fa-chart-pie"></i> Summary</button>
+</nav>
+
+<main>
+  <!-- ROOMS -->
+  <section class="panel active" id="rooms">
+    <p class="panel-title">Room Directory</p>
+    <p class="panel-sub">Single $100 &middot; Double $180 &middot; Family $300 &middot; Elite $600 &middot; Meeting $500 <span style="opacity:.5;">/night</span></p>
+    <div class="legend">
+      <span><span class="dot Single"></span>Single</span>
+      <span><span class="dot Double"></span>Double</span>
+      <span><span class="dot Family"></span>Family</span>
+      <span><span class="dot Elite"></span>Elite</span>
+      <span><span class="dot Meeting"></span>Meeting</span>
+    </div>
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="available"><i class="fa-solid fa-check" style="font-size:10px;"></i> Available</button>
+      <button class="filter-btn" data-filter="occupied"><i class="fa-solid fa-xmark" style="font-size:10px;"></i> Occupied</button>
+      <div class="search-filter">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="roomSearch" placeholder="Room or guest..." oninput="renderRooms()">
+      </div>
+    </div>
+    <div id="floorContainer"></div>
+  </section>
+
+  <!-- CHECK-IN -->
+  <section class="panel" id="checkin">
+    <p class="panel-title">Guest Check-In</p>
+    <p class="panel-sub">Enter a room number and guest details to open a booking.</p>
+    <div class="form-card">
+      <div class="field"><label>Room Number</label><input type="number" id="ciRoom" placeholder="e.g. 305"></div>
+      <div class="field"><label>Guest Full Name</label><input type="text" id="ciName" placeholder="e.g. Bilal Ahmed"></div>
+      <div class="field"><label>Contact Phone</label><input type="text" id="ciPhone" placeholder="e.g. 0300-1234567"></div>
+      <div class="field"><label>Number of Nights</label><input type="number" id="ciDays" min="1" value="1"></div>
+      <div class="field"><label>Payment Method</label>
+        <select id="ciMethod"><option>Cash</option><option>Online Card</option></select>
+      </div>
+      <button class="btn" onclick="doCheckIn()"><i class="fa-solid fa-check"></i> Confirm Check-In</button>
+      <div id="ciMsg"></div>
+    </div>
+  </section>
+
+  <!-- CHECK-OUT -->
+  <section class="panel" id="checkout">
+    <p class="panel-title">Guest Check-Out</p>
+    <p class="panel-sub">Settle the bill and free up the room.</p>
+    <div class="form-card">
+      <div class="field"><label>Room Number</label><input type="number" id="coRoom" placeholder="e.g. 305"></div>
+      <button class="btn" onclick="doCheckOut()"><i class="fa-solid fa-receipt"></i> Check Out &amp; Generate Receipt</button>
+      <div id="coMsg"></div>
+    </div>
+  </section>
+
+  <!-- RESTAURANT -->
+  <section class="panel" id="restaurant">
+    <p class="panel-title">Restaurant Order</p>
+    <p class="panel-sub">Charge food and drink orders to an occupied room.</p>
+    <div class="form-card" style="max-width:640px;">
+      <div class="field"><label>Room Number</label><input type="number" id="roRoom" placeholder="e.g. 305" onchange="loadRoomMenu()"></div>
+      <div id="menuArea"></div>
+      <ul class="order-list" id="orderList"></ul>
+      <div id="roMsg"></div>
+    </div>
+  </section>
+
+  <!-- REGISTRY -->
+  <section class="panel" id="registry">
+    <p class="panel-title">Occupied Rooms &mdash; Guest Registry</p>
+    <p class="panel-sub">All currently checked-in guests and their balances.</p>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Room</th><th>Floor</th><th>Type</th><th>Guest</th><th>Phone</th><th>Check-In</th><th>Check-Out</th><th>Nights</th><th>Balance</th></tr></thead>
+        <tbody id="registryBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="panel" id="summary">
+    <p class="panel-title">Hotel Operations Summary</p>
+    <p class="panel-sub">Live revenue and occupancy statistics.</p>
+    <div class="stat-grid" id="statGrid"></div>
+    <div style="overflow-x:auto;">
+      <table id="catTable"><tbody></tbody></table>
+    </div>
+  </section>
+</main>
+
+<!-- Receipt Modal -->
+<div class="overlay" id="receiptOverlay">
+  <div class="receipt" id="receiptBody"></div>
+</div>
+
+<!-- Room Detail Modal -->
+<div class="room-detail-overlay" id="roomDetailOverlay" onclick="if(event.target===this)closeRoomDetail()">
+  <div class="room-detail-card" id="roomDetailCard"></div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+(function() {
+  const CATEGORY_PRICE = { Single: 100, Double: 180, Family: 300, Elite: 600, Meeting: 500 };
+  const MENU = [
+    {id:1,name:"Club Sandwich",price:8.99,category:"Food"},
+    {id:2,name:"Grilled Chicken",price:18.50,category:"Food"},
+    {id:3,name:"Pasta Carbonara",price:14.00,category:"Food"},
+    {id:4,name:"Caesar Salad",price:10.00,category:"Food"},
+    {id:5,name:"Beef Burger",price:13.50,category:"Food"},
+    {id:6,name:"Margherita Pizza",price:12.00,category:"Food"},
+    {id:7,name:"Chocolate Lava Cake",price:7.50,category:"Dessert"},
+    {id:8,name:"Ice Cream Sundae",price:6.00,category:"Dessert"},
+    {id:9,name:"Mineral Water",price:2.50,category:"Drink"},
+    {id:10,name:"Fresh Juice",price:4.00,category:"Drink"},
+    {id:11,name:"Espresso Coffee",price:3.50,category:"Drink"},
+    {id:12,name:"Soft Drink",price:2.00,category:"Drink"},
+  ];
+
+  const STORAGE_KEY = 'grand-vista-inventory-v2';
+  const API_BASE = '/api';
+  let inventory = [];
+  let usingAPI = false;
+
+  // ── API helpers ──
+  async function apiCall(method, endpoint, body) {
+    try {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(API_BASE + endpoint, opts);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch { return null; }
+  }
+
+  async function initDatabase() {
+    const data = await apiCall('GET', '/rooms');
+    if (data && Array.isArray(data.rooms)) {
+      inventory = data.rooms;
+      usingAPI = true;
+      const badge = document.getElementById('connBadge');
+      badge.textContent = 'CLOUD SYNCED';
+      badge.classList.remove('offline');
+    } else {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      inventory = stored ? JSON.parse(stored) : buildInventory();
+      usingAPI = false;
+      const badge = document.getElementById('connBadge');
+      badge.textContent = 'LOCAL MODE';
+      badge.classList.add('offline');
+    }
+    renderRooms();
+  }
+
+  function save() {
+    if (!usingAPI) localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
+  }
+
+  async function apiSave() {
+    if (usingAPI) await apiCall('POST', '/rooms', { rooms: inventory });
+    else save();
+  }
+
+  // ── Build inventory (mirrors C++ exactly) ──
+  function buildInventory() {
+    const rooms = [];
+    for (let fl = 1; fl <= 5; fl++) {
+      for (let r = 1; r <= 20; r++) {
+        const roomNumber = fl * 100 + r;
+        const global = (fl - 1) * 20 + r;
+        let category;
+        if (global <= 20) category = "Single";
+        else if (global <= 40) category = "Double";
+        else if (global <= 60) category = "Family";
+        else if (global <= 95) category = "Elite";
+        else category = "Meeting";
+        rooms.push({
+          roomNumber, floor: fl, category, price: CATEGORY_PRICE[category],
+          checkedIn: false, guestName: "", guestPhone: "",
+          checkInDate: "", checkOutDate: "", daysBooked: 0,
+          paymentMethod: "None", orders: []
+        });
+      }
+    }
+    return rooms;
+  }
+
+  function findRoom(num) { return inventory.find(r => r.roomNumber === Number(num)); }
+  function today() { return new Date().toISOString().slice(0,10); }
+  function addDays(days) { const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+  function money(n) { return '$' + n.toFixed(2); }
+  function roomCharges(r) { return r.price * r.daysBooked; }
+  function restaurantCharges(r) { return (r.orders||[]).reduce((s,o)=>s+o.qty*o.unitPrice,0); }
+  function totalCharges(r) { return roomCharges(r) + restaurantCharges(r); }
+
+  // ── Toast ──
+  function toast(msg, type) {
+    const wrap = document.getElementById('toastWrap');
+    const t = document.createElement('div');
+    t.className = 'toast ' + (type || '');
+    t.innerHTML = '<i class="fa-solid ' + (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check') + '"></i> ' + msg;
+    wrap.appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3000);
+  }
+
+  // ── Nav ──
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.panel).classList.add('active');
+      if (tab.dataset.panel === 'registry') renderRegistry();
+      if (tab.dataset.panel === 'summary') renderSummary();
+      if (tab.dataset.panel === 'rooms') renderRooms();
+    });
+  });
+
+  // ── Filters ──
+  let currentFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderRooms();
+    });
+  });
+
+  // ── Rooms ──
+  function renderRooms() {
+    const container = document.getElementById('floorContainer');
+    container.innerHTML = '';
+    const query = (document.getElementById('roomSearch').value || '').toLowerCase();
+
+    for (let fl = 1; fl <= 5; fl++) {
+      const floorRooms = inventory.filter(r => r.floor === fl).filter(r => {
+        if (currentFilter === 'available' && r.checkedIn) return false;
+        if (currentFilter === 'occupied' && !r.checkedIn) return false;
+        if (query && !String(r.roomNumber).includes(query) && !(r.guestName||'').toLowerCase().includes(query) && !r.category.toLowerCase().includes(query)) return false;
+        return true;
+      });
+      if (!floorRooms.length) continue;
+      const block = document.createElement('div');
+      block.className = 'floor-block';
+      block.innerHTML = `<div class="floor-label">Floor ${fl}</div><div class="room-grid">` +
+        floorRooms.map(r => `
+          <div class="room-card ${r.checkedIn ? 'occupied' : 'available'}" onclick="showRoomDetail(${r.roomNumber})">
+            <div class="room-num">${r.roomNumber}</div>
+            <div class="room-cat"><span class="dot ${r.category}"></span>${r.category}</div>
+            <div class="room-price">$${r.price}/n</div>
+            ${r.checkedIn ? `<div class="room-guest">${r.guestName}</div>` : ''}
+          </div>
+        `).join('') + `</div>`;
+      container.appendChild(block);
+    }
+  }
+
+  // ── Room detail ──
+  window.showRoomDetail = function(num) {
+    const r = findRoom(num);
+    if (!r) return;
+    const card = document.getElementById('roomDetailCard');
+    let html = `<h3>Room ${r.roomNumber} <span style="font-size:14px;font-family:'Work Sans';opacity:.6;">${r.category}</span></h3>`;
+    html += `<div class="detail-row"><span class="label">Status</span><span style="color:${r.checkedIn?'var(--wine)':'var(--sage)'}">${r.checkedIn?'Occupied':'Available'}</span></div>`;
+    html += `<div class="detail-row"><span class="label">Floor</span><span>${r.floor}</span></div>`;
+    html += `<div class="detail-row"><span class="label">Rate/Night</span><span>${money(r.price)}</span></div>`;
+    if (r.checkedIn) {
+      html += `<div class="detail-row"><span class="label">Guest</span><span>${r.guestName}</span></div>`;
+      html += `<div class="detail-row"><span class="label">Phone</span><span>${r.guestPhone}</span></div>`;
+      html += `<div class="detail-row"><span class="label">Check-In</span><span>${r.checkInDate}</span></div>`;
+      html += `<div class="detail-row"><span class="label">Check-Out</span><span>${r.checkOutDate}</span></div>`;
+      html += `<div class="detail-row"><span class="label">Nights</span><span>${r.daysBooked}</span></div>`;
+      html += `<div class="detail-row"><span class="label">Payment</span><span>${r.paymentMethod}</span></div>`;
+      html += `<div class="detail-row"><span class="label">Room Charges</span><span>${money(roomCharges(r))}</span></div>`;
+      html += `<div class="detail-row"><span class="label">Restaurant</span><span>${money(restaurantCharges(r))}</span></div>`;
+      html += `<div class="detail-row" style="font-weight:700;"><span>Total</span><span style="color:var(--brass-light)">${money(totalCharges(r))}</span></div>`;
+    }
+    html += `<div class="actions">`;
+    html += `<button class="btn secondary small" onclick="closeRoomDetail()">Close</button>`;
+    if (!r.checkedIn) {
+      html += `<button class="btn small" onclick="closeRoomDetail();switchToTab('checkin');document.getElementById('ciRoom').value='${r.roomNumber}';">Check In</button>`;
+    }
+    html += `</div>`;
+    card.innerHTML = html;
+    document.getElementById('roomDetailOverlay').classList.add('show');
+  };
+
+  window.closeRoomDetail = function() {
+    document.getElementById('roomDetailOverlay').classList.remove('show');
+  };
+
+  window.switchToTab = function(panel) {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelector(`.tab[data-panel="${panel}"]`).classList.add('active');
+    document.getElementById(panel).classList.add('active');
+  };
+
+  // ── Check-in ──
+  window.doCheckIn = async function() {
+    const num = document.getElementById('ciRoom').value;
+    const name = document.getElementById('ciName').value.trim();
+    const phone = document.getElementById('ciPhone').value.trim();
+    const days = parseInt(document.getElementById('ciDays').value, 10);
+    const method = document.getElementById('ciMethod').value;
+    const msg = document.getElementById('ciMsg');
+
+    const r = findRoom(num);
+    if (!r) { msg.innerHTML = `<div class="msg err">Room not found.</div>`; return; }
+    if (r.checkedIn) { msg.innerHTML = `<div class="msg err">Room already occupied.</div>`; return; }
+    if (!name || !phone || !days || days <= 0) { msg.innerHTML = `<div class="msg err">Fill in all fields with a valid night count.</div>`; return; }
+
+    r.checkedIn = true; r.guestName = name; r.guestPhone = phone;
+    r.daysBooked = days; r.paymentMethod = method;
+    r.checkInDate = today(); r.checkOutDate = addDays(days);
+    await apiSave();
+
+    msg.innerHTML = `<div class="msg ok"><i class="fa-solid fa-check"></i> Checked in ${name} to Room ${r.roomNumber} &middot; ${days} night(s) &middot; checkout ${r.checkOutDate}</div>`;
+    document.getElementById('ciRoom').value = '';
+    document.getElementById('ciName').value = '';
+    document.getElementById('ciPhone').value = '';
+    renderRooms();
+    toast(`${name} checked into Room ${r.roomNumber}`, 'success');
+  };
+
+  // ── Check-out ──
+  window.doCheckOut = async function() {
+    const num = document.getElementById('coRoom').value;
+    const msg = document.getElementById('coMsg');
+    const r = findRoom(num);
+    if (!r) { msg.innerHTML = `<div class="msg err">Room not found.</div>`; return; }
+    if (!r.checkedIn) { msg.innerHTML = `<div class="msg err">Room is not occupied.</div>`; return; }
+
+    showReceipt(r);
+    r.checkedIn = false; r.guestName = ""; r.guestPhone = "";
+    r.checkInDate = ""; r.checkOutDate = ""; r.daysBooked = 0;
+    r.paymentMethod = "None"; r.orders = [];
+    await apiSave();
+
+    msg.innerHTML = `<div class="msg ok"><i class="fa-solid fa-check"></i> Room ${num} is now available.</div>`;
+    renderRooms();
+    toast(`Room ${num} checked out`, 'success');
+  };
+
+  function showReceipt(r) {
+    const rc = roomCharges(r), rt = restaurantCharges(r), total = rc + rt;
+    const orderRows = (r.orders||[]).map(o => `
+      <div class="line"><span>${o.qty}x ${o.itemName}</span><span>${money(o.qty*o.unitPrice)}</span></div>
+    `).join('') || '<div class="line"><span>No restaurant charges</span><span></span></div>';
+
+    document.getElementById('receiptBody').innerHTML = `
+      <h2><i class="fa-solid fa-receipt" style="opacity:.5;"></i> Checkout Receipt</h2>
+      <div style="font-size:12px;color:#666;">Grand Vista Hotel &middot; ${today()}</div>
+      <hr>
+      <div class="line"><span>Guest</span><span><strong>${r.guestName}</strong></span></div>
+      <div class="line"><span>Room</span><span>${r.roomNumber} (${r.category})</span></div>
+      <div class="line"><span>Check-In</span><span>${r.checkInDate}</span></div>
+      <div class="line"><span>Nights</span><span>${r.daysBooked}</span></div>
+      <div class="line"><span>Payment</span><span>${r.paymentMethod}</span></div>
+      <hr>
+      <div class="line"><span>Room Rate/Night</span><span>${money(r.price)}</span></div>
+      <div class="line"><span>Room Subtotal</span><span>${money(rc)}</span></div>
+      <hr>
+      <div style="font-weight:600;margin:8px 0 4px;">Restaurant Charges</div>
+      ${orderRows}
+      <div class="line"><span>Restaurant Subtotal</span><span>${money(rt)}</span></div>
+      <hr>
+      <div class="line total"><span>TOTAL AMOUNT DUE</span><span>${money(total)}</span></div>
+      <button class="btn print-btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Print Receipt</button>
+      <button class="btn close-btn" onclick="document.getElementById('receiptOverlay').classList.remove('show')">Close</button>
+    `;
+    document.getElementById('receiptOverlay').classList.add('show');
+  }
+
+  // ── Restaurant ──
+  window.loadRoomMenu = function() {
+    const num = document.getElementById('roRoom').value;
+    const r = findRoom(num);
+    const menuArea = document.getElementById('menuArea');
+    const msg = document.getElementById('roMsg');
+    if (!r) { menuArea.innerHTML=''; document.getElementById('orderList').innerHTML=''; msg.innerHTML=`<div class="msg err">Room not found.</div>`; return; }
+    if (!r.checkedIn) { menuArea.innerHTML=''; document.getElementById('orderList').innerHTML=''; msg.innerHTML=`<div class="msg err">Room is not checked in.</div>`; return; }
+    msg.innerHTML = `<div class="msg ok" style="margin-bottom:10px;">Ordering for: <strong>${r.guestName}</strong> (Room ${r.roomNumber})</div>`;
+
+    const grouped = {};
+    MENU.forEach(m => { if (!grouped[m.category]) grouped[m.category] = []; grouped[m.category].push(m); });
+
+    let html = '';
+    Object.entries(grouped).forEach(([cat, items]) => {
+      html += `<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--brass);margin:12px 0 6px;">${cat}</div>`;
+      html += `<div class="menu-grid">` + items.map(m => `
+        <div class="menu-item-card">
+          <div><div class="item-name">${m.name}</div><div class="item-price">${money(m.price)}</div></div>
+          <button onclick="addOrder(${num},${m.id})"><i class="fa-solid fa-plus"></i> Add</button>
+        </div>
+      `).join('') + `</div>`;
+    });
+    menuArea.innerHTML = html;
+    renderOrderList(r);
+  };
+
+  window.addOrder = async function(roomNum, itemId) {
+    const r = findRoom(roomNum);
+    const item = MENU.find(m => m.id === itemId);
+    if (!r || !item) return;
+    if (!r.orders) r.orders = [];
+    const existing = r.orders.find(o => o.itemName === item.name);
+    if (existing) existing.qty += 1;
+    else r.orders.push({ itemName: item.name, qty: 1, unitPrice: item.price });
+    await apiSave();
+    renderOrderList(r);
+    toast(`Added ${item.name}`, 'success');
+  };
+
+  function renderOrderList(r) {
+    const total = restaurantCharges(r);
+    document.getElementById('orderList').innerHTML = (r.orders||[]).map(o => `
+      <li><span>${o.qty}x ${o.itemName}</span><span>${money(o.qty*o.unitPrice)}</span></li>
+    `).join('') + `<li><strong>Restaurant Total</strong><strong>${money(total)}</strong></li>`;
+  }
+
+  // ── Registry ──
+  function renderRegistry() {
+    const body = document.getElementById('registryBody');
+    const occupied = inventory.filter(r => r.checkedIn);
+    if (!occupied.length) {
+      body.innerHTML = `<tr><td colspan="9" style="color:rgba(243,237,224,0.5);text-align:center;padding:30px;">No rooms currently occupied.</td></tr>`;
+      return;
+    }
+    body.innerHTML = occupied.map(r => `
+      <tr>
+        <td>${r.roomNumber}</td><td>${r.floor}</td><td>${r.category}</td>
+        <td>${r.guestName}</td><td>${r.guestPhone||'—'}</td>
+        <td>${r.checkInDate}</td><td>${r.checkOutDate}</td>
+        <td>${r.daysBooked}</td><td style="font-weight:600;">${money(totalCharges(r))}</td>
+      </tr>
+    `).join('');
+  }
+
+  // ── Summary ──
+  function renderSummary() {
+    const occupied = inventory.filter(r => r.checkedIn);
+    const available = inventory.length - occupied.length;
+    const roomRevenue = occupied.reduce((s,r)=>s+roomCharges(r),0);
+    const restRevenue = occupied.reduce((s,r)=>s+restaurantCharges(r),0);
+    const rate = (occupied.length / inventory.length * 100).toFixed(1);
+
+    const catCount = {};
+    occupied.forEach(r => catCount[r.category] = (catCount[r.category]||0)+1);
+
+    document.getElementById('statGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-num">${occupied.length}/${inventory.length}</div><div class="stat-label">Occupied Rooms</div></div>
+      <div class="stat-card"><div class="stat-num">${available}</div><div class="stat-label">Available Rooms</div></div>
+      <div class="stat-card"><div class="stat-num">${rate}%</div><div class="stat-label">Occupancy Rate</div></div>
+      <div class="stat-card"><div class="stat-num">${money(roomRevenue)}</div><div class="stat-label">Room Revenue</div></div>
+      <div class="stat-card"><div class="stat-num">${money(restRevenue)}</div><div class="stat-label">Restaurant Revenue</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--sage);">${money(roomRevenue+restRevenue)}</div><div class="stat-label">Total Revenue</div></div>
+    `;
+
+    document.getElementById('catTable').innerHTML = `
+      <thead><tr><th>Category</th><th>Occupied</th><th>Revenue</th></tr></thead>
+      <tbody>
+        ${Object.entries(catCount).map(([cat,n])=>`<tr><td><span class="dot ${cat}"></span>${cat}</td><td>${n}</td><td>${money(n * CATEGORY_PRICE[cat])}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:rgba(243,237,224,0.5);">No occupied rooms.</td></tr>'}
+      </tbody>
+    `;
+  }
+
+  // ── Keyboard shortcuts ──
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.getElementById('receiptOverlay').classList.remove('show');
+      document.getElementById('roomDetailOverlay').classList.remove('show');
+    }
+  });
+
+  // ── Init ──
+  initDatabase();
+})();
+</script>
+
+</body>
+</html>
