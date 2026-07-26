@@ -265,6 +265,7 @@
   <button class="tab" data-panel="summary"><i class="fa-solid fa-chart-pie"></i> Summary</button>
   <button class="tab" data-panel="concierge"><i class="fa-solid fa-concierge-bell"></i> Concierge</button>
   <button class="tab" data-panel="feedback"><i class="fa-solid fa-comments"></i> Feedback</button>
+  <button class="tab" data-panel="housekeeping"><i class="fa-solid fa-broom"></i> Housekeeping</button>
 </nav>
 
 <main>
@@ -414,6 +415,38 @@
     </div>
     <div id="feedbackBody"></div>
   </section>
+
+  <section class="panel" id="housekeeping">
+    <p class="panel-title">Housekeeping</p>
+    <p class="panel-sub">Manage room cleaning schedules and status</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Room Number</label>
+        <select id="hkRoom"></select>
+      </div>
+      <div class="field">
+        <label>Task</label>
+        <select id="hkTask">
+          <option value="Full Clean">Full Clean</option>
+          <option value="Towel Change">Towel Change</option>
+          <option value="Bed Making">Bed Making</option>
+          <option value="Restock Minibar">Restock Minibar</option>
+          <option value="Deep Clean">Deep Clean</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Priority</label>
+        <select id="hkPriority">
+          <option value="Normal">Normal</option>
+          <option value="High">High</option>
+          <option value="Urgent">Urgent</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="assignHousekeeping()"><i class="fa-solid fa-broom"></i> Assign Task</button>
+      <div id="hkMsg"></div>
+    </div>
+    <div id="housekeepingBody"></div>
+  </section>
 </main>
 
 <!-- Receipt Modal -->
@@ -480,6 +513,7 @@
     }
     renderRooms();
     populateConciergeRooms();
+    populateHousekeepingRooms();
   }
 
   function save() {
@@ -794,6 +828,46 @@
         ${Object.entries(catCount).map(([cat,n])=>`<tr><td><span class="dot ${cat}"></span>${cat}</td><td>${n}</td><td>${money(n * CATEGORY_PRICE[cat])}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:rgba(243,237,224,0.5);">No occupied rooms.</td></tr>'}
       </tbody>
     `;
+  }
+
+  // ── Housekeeping ──
+  let housekeepingTasks = [];
+
+  function populateHousekeepingRooms() {
+    const sel = document.getElementById('hkRoom');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Select room...</option>';
+    inventory.forEach(r => {
+      const o = document.createElement('option');
+      o.value = r.id;
+      o.textContent = r.id + ' (' + r.category + ') - ' + r.status;
+      sel.appendChild(o);
+    });
+  }
+
+  window.assignHousekeeping = function() {
+    const roomId = document.getElementById('hkRoom').value;
+    const task = document.getElementById('hkTask').value;
+    const priority = document.getElementById('hkPriority').value;
+    const msg = document.getElementById('hkMsg');
+    if (!roomId) { msg.innerHTML = '<div class="msg err">Select a room.</div>'; return; }
+
+    housekeepingTasks.push({
+      id: 'HK' + String(housekeepingTasks.length + 1).padStart(3,'0'),
+      roomId, task, priority, status: 'Pending',
+      time: new Date().toLocaleTimeString()
+    });
+    msg.innerHTML = '<div class="msg ok">Housekeeping task assigned to ' + roomId + '</div>';
+    renderHousekeeping();
+  };
+
+  function renderHousekeeping() {
+    const container = document.getElementById('housekeepingBody');
+    if (!housekeepingTasks.length) {
+      container.innerHTML = '<div class="empty-state" style="color:var(--ivory);"><i class="fa-solid fa-broom"></i><p>No housekeeping tasks</p></div>';
+      return;
+    }
+    container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Task</th><th>Priority</th><th>Time</th><th>Status</th></tr></thead><tbody>${housekeepingTasks.map(t => `<tr><td>${t.id}</td><td>${t.roomId}</td><td>${t.task}</td><td style="color:${t.priority==='Urgent'?'var(--wine)':t.priority==='High'?'var(--brass)':'var(--ivory)'};">${t.priority}</td><td>${t.time}</td><td><span class="badge badge-${t.status==='Done'?'available':'checked'}">${t.status}</span></td></tr>`).join('')}</tbody></table>`;
   }
 
   // ── Concierge ──
