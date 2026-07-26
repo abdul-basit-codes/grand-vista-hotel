@@ -263,6 +263,8 @@
   <button class="tab" data-panel="restaurant"><i class="fa-solid fa-utensils"></i> Restaurant</button>
   <button class="tab" data-panel="registry"><i class="fa-solid fa-book"></i> Registry</button>
   <button class="tab" data-panel="summary"><i class="fa-solid fa-chart-pie"></i> Summary</button>
+  <button class="tab" data-panel="concierge"><i class="fa-solid fa-concierge-bell"></i> Concierge</button>
+  <button class="tab" data-panel="feedback"><i class="fa-solid fa-comments"></i> Feedback</button>
 </nav>
 
 <main>
@@ -350,6 +352,68 @@
       <table id="catTable"><tbody></tbody></table>
     </div>
   </section>
+
+  <section class="panel" id="concierge">
+    <p class="panel-title">Concierge & Room Service</p>
+    <p class="panel-sub">Request services for occupied rooms</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Room Number</label>
+        <select id="concRoom"></select>
+      </div>
+      <div class="field">
+        <label>Service Type</label>
+        <select id="concService">
+          <option value="Towel">Extra Towels</option>
+          <option value="Pillow">Extra Pillows</option>
+          <option value="Toiletry">Toiletry Kit</option>
+          <option value="Laundry">Laundry Pickup</option>
+          <option value="Wake-up">Wake-up Call</option>
+          <option value="Transport">Airport Transfer</option>
+          <option value="Spa">Spa Booking</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <input type="text" id="concNotes" placeholder="e.g. Extra soft pillows please">
+      </div>
+      <button class="btn btn-primary" onclick="placeConciergeOrder()"><i class="fa-solid fa-paper-plane"></i> Submit Request</button>
+      <div id="concMsg"></div>
+    </div>
+    <div id="conciergeBody"></div>
+  </section>
+
+  <section class="panel" id="feedback">
+    <p class="panel-title">Guest Feedback</p>
+    <p class="panel-sub">View and submit guest reviews</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Room Number</label>
+        <select id="fbRoom"></select>
+      </div>
+      <div class="field">
+        <label>Guest Name</label>
+        <input type="text" id="fbName" placeholder="e.g. John Smith">
+      </div>
+      <div class="field">
+        <label>Rating</label>
+        <select id="fbRating">
+          <option value="5">5 - Excellent</option>
+          <option value="4">4 - Very Good</option>
+          <option value="3">3 - Good</option>
+          <option value="2">2 - Fair</option>
+          <option value="1">1 - Poor</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Comments</label>
+        <input type="text" id="fbComment" placeholder="Share your experience...">
+      </div>
+      <button class="btn btn-primary" onclick="submitFeedback()"><i class="fa-solid fa-star"></i> Submit Feedback</button>
+      <div id="fbMsg"></div>
+    </div>
+    <div id="feedbackBody"></div>
+  </section>
 </main>
 
 <!-- Receipt Modal -->
@@ -415,6 +479,7 @@
       badge.classList.add('offline');
     }
     renderRooms();
+    populateConciergeRooms();
   }
 
   function save() {
@@ -729,6 +794,81 @@
         ${Object.entries(catCount).map(([cat,n])=>`<tr><td><span class="dot ${cat}"></span>${cat}</td><td>${n}</td><td>${money(n * CATEGORY_PRICE[cat])}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:rgba(243,237,224,0.5);">No occupied rooms.</td></tr>'}
       </tbody>
     `;
+  }
+
+  // ── Concierge ──
+  let conciergeOrders = [];
+
+  function populateConciergeRooms() {
+    const occupied = inventory.filter(r => r.status === 'occupied');
+    ['concRoom','fbRoom'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Select room...</option>';
+      occupied.forEach(r => {
+        const o = document.createElement('option');
+        o.value = r.id;
+        o.textContent = r.id + ' - ' + r.guest + ' (' + r.category + ')';
+        sel.appendChild(o);
+      });
+    });
+  }
+
+  window.placeConciergeOrder = function() {
+    const roomId = document.getElementById('concRoom').value;
+    const service = document.getElementById('concService').value;
+    const notes = document.getElementById('concNotes').value.trim();
+    const msg = document.getElementById('concMsg');
+    if (!roomId) { msg.innerHTML = '<div class="msg err">Select a room.</div>'; return; }
+
+    const room = inventory.find(r => r.id === roomId);
+    conciergeOrders.push({
+      id: 'CONC' + String(conciergeOrders.length + 1).padStart(3,'0'),
+      roomId, guest: room ? room.guest : '', service, notes,
+      time: new Date().toLocaleTimeString(), status: 'Pending'
+    });
+    saveInventory();
+    msg.innerHTML = '<div class="msg ok">Service request submitted for ' + roomId + '</div>';
+    document.getElementById('concNotes').value = '';
+    renderConcierge();
+  };
+
+  function renderConcierge() {
+    const container = document.getElementById('conciergeBody');
+    if (!conciergeOrders.length) {
+      container.innerHTML = '<div class="empty-state" style="color:var(--ivory);"><i class="fa-solid fa-concierge-bell"></i><p>No service requests yet</p></div>';
+      return;
+    }
+    container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Guest</th><th>Service</th><th>Notes</th><th>Time</th><th>Status</th></tr></thead><tbody>${conciergeOrders.map(o => `<tr><td>${o.id}</td><td>${o.roomId}</td><td>${o.guest}</td><td>${o.service}</td><td>${o.notes || '-'}</td><td>${o.time}</td><td><span class="badge badge-${o.status==='Done'?'available':'checked'}">${o.status}</span></td></tr>`).join('')}</tbody></table>`;
+  }
+
+  // ── Feedback ──
+  let feedbacks = [];
+
+  window.submitFeedback = function() {
+    const roomId = document.getElementById('fbRoom').value;
+    const name = document.getElementById('fbName').value.trim();
+    const rating = parseInt(document.getElementById('fbRating').value);
+    const comment = document.getElementById('fbComment').value.trim();
+    const msg = document.getElementById('fbMsg');
+    if (!roomId || !name) { msg.innerHTML = '<div class="msg err">Select room and enter name.</div>'; return; }
+
+    feedbacks.push({ roomId, name, rating, comment, date: new Date().toLocaleDateString() });
+    saveInventory();
+    msg.innerHTML = '<div class="msg ok">Thank you for your feedback!</div>';
+    document.getElementById('fbName').value = '';
+    document.getElementById('fbComment').value = '';
+    renderFeedback();
+  };
+
+  function renderFeedback() {
+    const container = document.getElementById('feedbackBody');
+    if (!feedbacks.length) {
+      container.innerHTML = '<div class="empty-state" style="color:var(--ivory);"><i class="fa-solid fa-comments"></i><p>No feedback yet</p></div>';
+      return;
+    }
+    const avgRating = (feedbacks.reduce((s,f) => s + f.rating, 0) / feedbacks.length).toFixed(1);
+    container.innerHTML = `<p style="color:var(--brass);margin-bottom:12px;">Average Rating: <strong>${avgRating}</strong> / 5 (${feedbacks.length} reviews)</p><table><thead><tr><th>Room</th><th>Guest</th><th>Rating</th><th>Comment</th><th>Date</th></tr></thead><tbody>${feedbacks.map(f => { const stars = '&#9733;'.repeat(f.rating) + '&#9734;'.repeat(5-f.rating); return `<tr><td>${f.roomId}</td><td>${f.name}</td><td style="color:var(--brass);">${stars}</td><td>${f.comment || '-'}</td><td>${f.date}</td></tr>`; }).join('')}</tbody></table>`;
   }
 
   // ── Keyboard shortcuts ──
