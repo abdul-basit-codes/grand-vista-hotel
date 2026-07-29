@@ -267,6 +267,7 @@
   <button class="tab" data-panel="feedback"><i class="fa-solid fa-comments"></i> Feedback</button>
   <button class="tab" data-panel="housekeeping"><i class="fa-solid fa-broom"></i> Housekeeping</button>
   <button class="tab" data-panel="offers"><i class="fa-solid fa-tag"></i> Offers</button>
+  <button class="tab" data-panel="loyalty"><i class="fa-solid fa-crown"></i> Loyalty</button>
   <button class="tab" data-panel="roomReviews"><i class="fa-solid fa-star"></i> Reviews</button>
 </nav>
 
@@ -483,6 +484,13 @@
     <p class="panel-sub">Average ratings and feedback summaries by room</p>
     <div id="roomReviewsBody"></div>
   </section>
+
+  <!-- LOYALTY -->
+  <section class="panel" id="loyalty">
+    <p class="panel-title">Guest Loyalty</p>
+    <p class="panel-sub">Loyalty points earned from check-ins and spending</p>
+    <div id="loyaltyBody"></div>
+  </section>
 </main>
 
 <!-- Receipt Modal -->
@@ -615,6 +623,7 @@
       if (tab.dataset.panel === 'rooms') renderRooms();
       if (tab.dataset.panel === 'offers') renderOffers();
       if (tab.dataset.panel === 'roomReviews') renderRoomReviews();
+      if (tab.dataset.panel === 'loyalty') renderLoyalty();
     });
   });
 
@@ -1049,6 +1058,29 @@
       const stars = '&#9733;'.repeat(Math.round(parseFloat(avg))) + '&#9734;'.repeat(5-Math.round(parseFloat(avg)));
       const cat = room ? room.category : '-';
       return `<tr><td>${roomId}</td><td>${room ? room.guestName || 'Vacant' : '-'}</td><td>${cat}</td><td style="color:var(--brass);">${stars} ${avg}</td><td>${data.ratings.length}</td></tr>`;
+    }).join('')}</tbody></table>`;
+  }
+
+  // ── Loyalty ──
+  function renderLoyalty() {
+    const container = document.getElementById('loyaltyBody');
+    const inventory = getInventory();
+    const guests = inventory.filter(r => r.checkedIn);
+    if (!guests.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-crown"></i><p>No guests currently checked in.</p></div>';
+      return;
+    }
+    const tiers = [
+      { min: 0, label: 'Bronze', color: 'var(--wine)' },
+      { min: 20, label: 'Silver', color: '#b0b0b0' },
+      { min: 50, label: 'Gold', color: 'var(--brass)' },
+      { min: 100, label: 'Platinum', color: '#e5e4e2' },
+    ];
+    container.innerHTML = `<table><thead><tr><th>Guest</th><th>Room</th><th>Points</th><th>Tier</th><th>Reward</th></tr></thead><tbody>${guests.map(r => {
+      const points = r.daysBooked * 10 + Math.floor(roomCharges(r) / 50);
+      const tier = [...tiers].reverse().find(t => points >= t.min) || tiers[0];
+      const reward = tier.label === 'Platinum' ? 'Free Weekend' : tier.label === 'Gold' ? 'Late Checkout' : tier.label === 'Silver' ? 'Complimentary Breakfast' : 'Welcome Drink';
+      return `<tr><td>${r.guestName}</td><td>${r.roomNumber}</td><td style="font-weight:600;">${points}</td><td style="color:${tier.color};font-weight:600;">${tier.label}</td><td>${reward}</td></tr>`;
     }).join('')}</tbody></table>`;
   }
 
