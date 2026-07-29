@@ -266,6 +266,8 @@
   <button class="tab" data-panel="concierge"><i class="fa-solid fa-concierge-bell"></i> Concierge</button>
   <button class="tab" data-panel="feedback"><i class="fa-solid fa-comments"></i> Feedback</button>
   <button class="tab" data-panel="housekeeping"><i class="fa-solid fa-broom"></i> Housekeeping</button>
+  <button class="tab" data-panel="offers"><i class="fa-solid fa-tag"></i> Offers</button>
+  <button class="tab" data-panel="roomReviews"><i class="fa-solid fa-star"></i> Reviews</button>
 </nav>
 
 <main>
@@ -447,6 +449,40 @@
     </div>
     <div id="housekeepingBody"></div>
   </section>
+
+  <!-- OFFERS -->
+  <section class="panel" id="offers">
+    <p class="panel-title">Special Offers</p>
+    <p class="panel-sub">Promotional deals and discount codes</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Offer Title</label>
+        <input type="text" id="offerTitle" placeholder="e.g. Summer Special">
+      </div>
+      <div class="field">
+        <label>Discount (%)</label>
+        <input type="number" id="offerDiscount" placeholder="20" min="1" max="100">
+      </div>
+      <div class="field">
+        <label>Promo Code</label>
+        <input type="text" id="offerCode" placeholder="SUMMER20">
+      </div>
+      <div class="field">
+        <label>Valid Until</label>
+        <input type="date" id="offerValid">
+      </div>
+      <button class="btn btn-primary" onclick="addOffer()"><i class="fa-solid fa-tag"></i> Create Offer</button>
+      <div id="offerMsg"></div>
+    </div>
+    <div id="offersBody"></div>
+  </section>
+
+  <!-- ROOM REVIEWS -->
+  <section class="panel" id="roomReviews">
+    <p class="panel-title">Room Reviews</p>
+    <p class="panel-sub">Average ratings and feedback summaries by room</p>
+    <div id="roomReviewsBody"></div>
+  </section>
 </main>
 
 <!-- Receipt Modal -->
@@ -577,6 +613,8 @@
       if (tab.dataset.panel === 'registry') renderRegistry();
       if (tab.dataset.panel === 'summary') renderSummary();
       if (tab.dataset.panel === 'rooms') renderRooms();
+      if (tab.dataset.panel === 'offers') renderOffers();
+      if (tab.dataset.panel === 'roomReviews') renderRoomReviews();
     });
   });
 
@@ -943,6 +981,75 @@
     }
     const avgRating = (feedbacks.reduce((s,f) => s + f.rating, 0) / feedbacks.length).toFixed(1);
     container.innerHTML = `<p style="color:var(--brass);margin-bottom:12px;">Average Rating: <strong>${avgRating}</strong> / 5 (${feedbacks.length} reviews)</p><table><thead><tr><th>Room</th><th>Guest</th><th>Rating</th><th>Comment</th><th>Date</th></tr></thead><tbody>${feedbacks.map(f => { const stars = '&#9733;'.repeat(f.rating) + '&#9734;'.repeat(5-f.rating); return `<tr><td>${f.roomId}</td><td>${f.name}</td><td style="color:var(--brass);">${stars}</td><td>${f.comment || '-'}</td><td>${f.date}</td></tr>`; }).join('')}</tbody></table>`;
+  }
+
+  // ── Offers ──
+  let offers = JSON.parse(localStorage.getItem('gv-offers') || '[]');
+
+  window.addOffer = function() {
+    const title = document.getElementById('offerTitle').value.trim();
+    const discount = document.getElementById('offerDiscount').value;
+    const code = document.getElementById('offerCode').value.trim().toUpperCase();
+    const valid = document.getElementById('offerValid').value;
+    const msg = document.getElementById('offerMsg');
+    if (!title || !discount || !code || !valid) { msg.innerHTML = '<div class="msg err">Fill all fields.</div>'; return; }
+
+    offers.push({ title, discount: parseInt(discount), code, valid, created: new Date().toLocaleDateString() });
+    localStorage.setItem('gv-offers', JSON.stringify(offers));
+    msg.innerHTML = '<div class="msg ok">Offer created!</div>';
+    document.getElementById('offerTitle').value = '';
+    document.getElementById('offerDiscount').value = '';
+    document.getElementById('offerCode').value = '';
+    document.getElementById('offerValid').value = '';
+    renderOffers();
+  };
+
+  function renderOffers() {
+    const container = document.getElementById('offersBody');
+    if (!offers.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-tag"></i><p>No offers yet. Create one above.</p></div>';
+      return;
+    }
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">${offers.map((o,i) => `
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--brass);border-radius:8px;padding:16px;">
+        <div style="font-size:11px;font-weight:600;color:var(--brass);letter-spacing:1px;">${o.code}</div>
+        <div style="font-size:18px;font-weight:600;margin:6px 0;">${o.title}</div>
+        <div style="font-size:28px;color:var(--sage);font-weight:700;">${o.discount}% OFF</div>
+        <div style="font-size:11px;color:var(--ivory);opacity:.6;margin-top:8px;">Valid until ${o.valid}</div>
+        <button class="btn btn-outline" style="margin-top:8px;font-size:11px;" onclick="deleteOffer(${i})">Remove</button>
+      </div>`).join('')}</div>`;
+  }
+
+  window.deleteOffer = function(i) {
+    offers.splice(i, 1);
+    localStorage.setItem('gv-offers', JSON.stringify(offers));
+    renderOffers();
+  };
+
+  // ── Room Reviews Summary ──
+  function renderRoomReviews() {
+    const container = document.getElementById('roomReviewsBody');
+    if (!container) return;
+    const inventory = getInventory();
+    if (!feedbacks.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-star"></i><p>No reviews yet. Check the Feedback tab.</p></div>';
+      return;
+    }
+
+    const byRoom = {};
+    feedbacks.forEach(f => {
+      if (!byRoom[f.roomId]) byRoom[f.roomId] = { ratings: [], comments: [], name: f.roomId };
+      byRoom[f.roomId].ratings.push(f.rating);
+      byRoom[f.roomId].comments.push(f.comment);
+    });
+
+    container.innerHTML = `<table><thead><tr><th>Room</th><th>Guest</th><th>Category</th><th>Avg Rating</th><th>Reviews</th></tr></thead><tbody>${Object.entries(byRoom).map(([roomId, data]) => {
+      const room = inventory.find(r => String(r.roomNumber) === roomId);
+      const avg = (data.ratings.reduce((a,b)=>a+b,0) / data.ratings.length).toFixed(1);
+      const stars = '&#9733;'.repeat(Math.round(parseFloat(avg))) + '&#9734;'.repeat(5-Math.round(parseFloat(avg)));
+      const cat = room ? room.category : '-';
+      return `<tr><td>${roomId}</td><td>${room ? room.guestName || 'Vacant' : '-'}</td><td>${cat}</td><td style="color:var(--brass);">${stars} ${avg}</td><td>${data.ratings.length}</td></tr>`;
+    }).join('')}</tbody></table>`;
   }
 
   // ── Keyboard shortcuts ──
