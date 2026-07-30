@@ -333,6 +333,10 @@
       <ul class="order-list" id="orderList"></ul>
       <div id="roMsg"></div>
     </div>
+    <div class="form-card" style="margin-top:12px;">
+      <h3 style="margin-bottom:8px;">Quick Order <span style="font-size:12px;font-weight:400;opacity:.6;">for any occupied room</span></h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:12px;" id="quickMenuGrid"></div>
+    </div>
   </section>
 
   <!-- REGISTRY -->
@@ -963,6 +967,41 @@
     container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Guest</th><th>Service</th><th>Notes</th><th>Time</th><th>Status</th></tr></thead><tbody>${conciergeOrders.map(o => `<tr><td>${o.id}</td><td>${o.roomId}</td><td>${o.guest}</td><td>${o.service}</td><td>${o.notes || '-'}</td><td>${o.time}</td><td><span class="badge badge-${o.status==='Done'?'available':'checked'}">${o.status}</span></td></tr>`).join('')}</tbody></table>`;
   }
 
+  // ── Quick Order ──
+  const QUICK_MENU = [
+    { name:'Coffee', price:5, icon:'fa-solid fa-mug-hot' },
+    { name:'Tea', price:4, icon:'fa-solid fa-mug-saucer' },
+    { name:'Sandwich', price:12, icon:'fa-solid fa-bread-slice' },
+    { name:'Pasta', price:18, icon:'fa-solid fa-utensils' },
+    { name:'Juice', price:6, icon:'fa-solid fa-glass-citrus' },
+    { name:'Water', price:3, icon:'fa-solid fa-bottle-water' },
+  ];
+
+  function renderQuickMenu() {
+    const grid = document.getElementById('quickMenuGrid');
+    if (!grid) return;
+    grid.innerHTML = QUICK_MENU.map(item =>
+      '<div onclick="quickOrder(\'' + item.name + '\', ' + item.price + ')" style="padding:12px;border:1px solid var(--brass);border-radius:8px;text-align:center;cursor:pointer;transition:.2s;background:rgba(255,255,255,0.03);" onmouseover="this.style.background=\'rgba(255,255,255,0.08)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.03)\'">' +
+        '<div style="font-size:24px;margin-bottom:6px;color:var(--brass);"><i class="' + item.icon + '"></i></div>' +
+        '<div style="font-size:14px;font-weight:600;">' + item.name + '</div>' +
+        '<div style="font-size:12px;color:var(--sage);">$' + item.price + '</div>' +
+      '</div>'
+    ).join('');
+  }
+
+  window.quickOrder = function(name, price) {
+    const rooms = inventory.filter(r => r.checkedIn);
+    if (!rooms.length) { toast('No occupied rooms available', 'error'); return; }
+    const room = rooms[0];
+    if (!room.orders) room.orders = [];
+    const existing = room.orders.find(o => o.itemName === name);
+    if (existing) existing.qty++; else room.orders.push({ itemName: name, qty: 1, unitPrice: price });
+    saveInventory();
+    toast(name + ' added to Room ' + room.roomNumber, 'success');
+  };
+
+  function initQuickMenu() { renderQuickMenu(); }
+
   // ── Feedback ──
   let feedbacks = [];
 
@@ -1094,6 +1133,7 @@
 
   // ── Init ──
   initDatabase();
+  initQuickMenu();
 })();
 </script>
 
