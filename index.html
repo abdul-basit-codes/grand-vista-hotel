@@ -268,6 +268,7 @@
   <button class="tab" data-panel="housekeeping"><i class="fa-solid fa-broom"></i> Housekeeping</button>
   <button class="tab" data-panel="offers"><i class="fa-solid fa-tag"></i> Offers</button>
   <button class="tab" data-panel="loyalty"><i class="fa-solid fa-crown"></i> Loyalty</button>
+  <button class="tab" data-panel="guestDir"><i class="fa-solid fa-address-book"></i> Guests</button>
   <button class="tab" data-panel="roomReviews"><i class="fa-solid fa-star"></i> Reviews</button>
 </nav>
 
@@ -495,6 +496,20 @@
     <p class="panel-sub">Loyalty points earned from check-ins and spending</p>
     <div id="loyaltyBody"></div>
   </section>
+
+  <!-- GUEST DIRECTORY -->
+  <section class="panel" id="guestDir">
+    <p class="panel-title">Guest Directory</p>
+    <p class="panel-sub">Search guest contacts and stay history</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Search</label>
+        <input type="text" id="guestSearch" placeholder="Name, room, or phone..." oninput="renderGuestDir()">
+      </div>
+      <button class="btn btn-primary" onclick="exportGuestDir()"><i class="fa-solid fa-download"></i> Export Contacts</button>
+    </div>
+    <div id="guestDirBody"></div>
+  </section>
 </main>
 
 <!-- Receipt Modal -->
@@ -628,6 +643,7 @@
       if (tab.dataset.panel === 'offers') renderOffers();
       if (tab.dataset.panel === 'roomReviews') renderRoomReviews();
       if (tab.dataset.panel === 'loyalty') renderLoyalty();
+      if (tab.dataset.panel === 'guestDir') renderGuestDir();
     });
   });
 
@@ -1072,6 +1088,34 @@
     offers.splice(i, 1);
     localStorage.setItem('gv-offers', JSON.stringify(offers));
     renderOffers();
+  };
+
+  // ── Guest Directory ──
+  function renderGuestDir() {
+    const container = document.getElementById('guestDirBody');
+    if (!container) return;
+    const query = (document.getElementById('guestSearch').value || '').toLowerCase();
+    const guests = inventory.filter(r => r.checkedIn && (!query || r.guestName.toLowerCase().includes(query) || String(r.roomNumber).includes(query) || (r.guestPhone||'').includes(query)));
+
+    if (!guests.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-address-book"></i><p>' + (query ? 'No guests match your search.' : 'No guests currently checked in.') + '</p></div>';
+      return;
+    }
+
+    container.innerHTML = `<table><thead><tr><th>Room</th><th>Guest</th><th>Phone</th><th>Check-In</th><th>Nights</th><th>Total</th></tr></thead><tbody>${guests.map(r => `<tr><td>${r.roomNumber}</td><td>${r.guestName}</td><td>${r.guestPhone || '-'}</td><td>${r.checkInDate}</td><td>${r.daysBooked}</td><td>${money(totalCharges(r))}</td></tr>`).join('')}</tbody></table>
+    <p style="font-size:13px;color:var(--ivory);opacity:.6;margin-top:8px;">${guests.length} guest${guests.length > 1 ? 's' : ''} found</p>`;
+  }
+
+  window.exportGuestDir = function() {
+    const guests = inventory.filter(r => r.checkedIn);
+    if (!guests.length) { toast('No guests to export', 'error'); return; }
+    let csv = 'Room,Guest,Phone,Check-In,Nights,Total\n';
+    guests.forEach(r => csv += r.roomNumber + ',' + r.guestName + ',' + (r.guestPhone||'') + ',' + r.checkInDate + ',' + r.daysBooked + ',' + totalCharges(r) + '\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'guests-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    toast('Contacts exported');
   };
 
   // ── Room Reviews Summary ──
