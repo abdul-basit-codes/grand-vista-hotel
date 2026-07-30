@@ -269,6 +269,7 @@
   <button class="tab" data-panel="offers"><i class="fa-solid fa-tag"></i> Offers</button>
   <button class="tab" data-panel="loyalty"><i class="fa-solid fa-crown"></i> Loyalty</button>
   <button class="tab" data-panel="guestDir"><i class="fa-solid fa-address-book"></i> Guests</button>
+  <button class="tab" data-panel="maintenance"><i class="fa-solid fa-wrench"></i> Maintenance</button>
   <button class="tab" data-panel="roomReviews"><i class="fa-solid fa-star"></i> Reviews</button>
 </nav>
 
@@ -510,6 +511,29 @@
     </div>
     <div id="guestDirBody"></div>
   </section>
+
+  <!-- MAINTENANCE -->
+  <section class="panel" id="maintenance">
+    <p class="panel-title">Maintenance Log</p>
+    <p class="panel-sub">Track room issues and repairs</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Room</label>
+        <select id="maintRoom"></select>
+      </div>
+      <div class="field">
+        <label>Issue</label>
+        <input type="text" id="maintIssue" placeholder="e.g. AC not working">
+      </div>
+      <div class="field">
+        <label>Priority</label>
+        <select id="maintPriority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option><option value="Emergency">Emergency</option></select>
+      </div>
+      <button class="btn btn-primary" onclick="logMaintenance()"><i class="fa-solid fa-wrench"></i> Log Issue</button>
+      <div id="maintMsg"></div>
+    </div>
+    <div id="maintenanceBody"></div>
+  </section>
 </main>
 
 <!-- Receipt Modal -->
@@ -644,6 +668,7 @@
       if (tab.dataset.panel === 'roomReviews') renderRoomReviews();
       if (tab.dataset.panel === 'loyalty') renderLoyalty();
       if (tab.dataset.panel === 'guestDir') renderGuestDir();
+      if (tab.dataset.panel === 'maintenance') renderMaintenance();
     });
   });
 
@@ -1091,6 +1116,38 @@
   };
 
   // ── Guest Directory ──
+  let maintenanceLog = JSON.parse(localStorage.getItem('gv-maintenance') || '[]');
+
+  function populateMaintRooms() {
+    const sel = document.getElementById('maintRoom');
+    if (!sel) return;
+    sel.innerHTML = '<option>Select room...</option>' + inventory.map(r => '<option value="' + r.roomNumber + '">' + r.roomNumber + ' (' + r.category + ')</option>').join('');
+  }
+
+  window.logMaintenance = function() {
+    const room = document.getElementById('maintRoom').value;
+    const issue = document.getElementById('maintIssue').value.trim();
+    const priority = document.getElementById('maintPriority').value;
+    const msg = document.getElementById('maintMsg');
+    if (!room || !issue) { msg.innerHTML = '<div class="msg err">Select room and describe issue.</div>'; return; }
+
+    maintenanceLog.unshift({ id: 'MNT' + Date.now(), room, issue, priority, date: new Date().toLocaleDateString(), status: 'Open' });
+    localStorage.setItem('gv-maintenance', JSON.stringify(maintenanceLog));
+    msg.innerHTML = '<div class="msg ok">Issue logged</div>';
+    document.getElementById('maintIssue').value = '';
+    renderMaintenance();
+  };
+
+  function renderMaintenance() {
+    const container = document.getElementById('maintenanceBody');
+    if (!container) return;
+    const log = maintenanceLog;
+    if (!log.length) { container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-wrench"></i><p>No maintenance issues logged.</p></div>'; return; }
+
+    const colors = { Low: 'var(--sage)', Medium: 'var(--brass)', High: 'var(--wine)', Emergency: 'var(--wine)' };
+    container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Issue</th><th>Priority</th><th>Date</th><th>Status</th></tr></thead><tbody>${log.map(m => `<tr><td>${m.id}</td><td>${m.room}</td><td>${m.issue}</td><td style="color:${colors[m.priority] || 'var(--ivory)'};font-weight:600;">${m.priority}</td><td>${m.date}</td><td><span class="badge badge-${m.status === 'Resolved' ? 'available' : 'checked'}">${m.status}</span></td></tr>`).join('')}</tbody></table>`;
+  }
+
   function renderGuestDir() {
     const container = document.getElementById('guestDirBody');
     if (!container) return;
@@ -1178,6 +1235,7 @@
   // ── Init ──
   initDatabase();
   initQuickMenu();
+  populateMaintRooms();
 })();
 </script>
 
