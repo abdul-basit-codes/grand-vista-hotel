@@ -263,6 +263,7 @@
   <button class="tab" data-panel="restaurant"><i class="fa-solid fa-utensils"></i> Restaurant</button>
   <button class="tab" data-panel="registry"><i class="fa-solid fa-book"></i> Registry</button>
   <button class="tab" data-panel="summary"><i class="fa-solid fa-chart-pie"></i> Summary</button>
+  <button class="tab" data-panel="finances"><i class="fa-solid fa-coins"></i> Finances</button>
   <button class="tab" data-panel="concierge"><i class="fa-solid fa-concierge-bell"></i> Concierge</button>
   <button class="tab" data-panel="feedback"><i class="fa-solid fa-comments"></i> Feedback</button>
   <button class="tab" data-panel="housekeeping"><i class="fa-solid fa-broom"></i> Housekeeping</button>
@@ -361,6 +362,36 @@
     <div style="overflow-x:auto;">
       <table id="catTable"><tbody></tbody></table>
     </div>
+  </section>
+
+  <section class="panel" id="finances">
+    <p class="panel-title">Finances</p>
+    <p class="panel-sub">Track operating expenses and net profit</p>
+    <div class="stat-grid" id="financeGrid"></div>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Expense Description</label>
+        <input type="text" id="expDesc" placeholder="e.g. Linen supplies">
+      </div>
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="number" id="expAmount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="expCategory">
+          <option>Supplies</option>
+          <option>Utilities</option>
+          <option>Staff</option>
+          <option>Maintenance</option>
+          <option>Marketing</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="addExpense()"><i class="fa-solid fa-plus"></i> Add Expense</button>
+      <div id="expMsg"></div>
+    </div>
+    <div style="overflow-x:auto;"><table id="expenseTable"><tbody></tbody></table></div>
   </section>
 
   <section class="panel" id="concierge">
@@ -663,6 +694,7 @@
       document.getElementById(tab.dataset.panel).classList.add('active');
       if (tab.dataset.panel === 'registry') renderRegistry();
       if (tab.dataset.panel === 'summary') renderSummary();
+      if (tab.dataset.panel === 'finances') renderFinances();
       if (tab.dataset.panel === 'rooms') renderRooms();
       if (tab.dataset.panel === 'offers') renderOffers();
       if (tab.dataset.panel === 'roomReviews') renderRoomReviews();
@@ -960,6 +992,52 @@
       return;
     }
     container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Task</th><th>Priority</th><th>Time</th><th>Status</th></tr></thead><tbody>${housekeepingTasks.map(t => `<tr><td>${t.id}</td><td>${t.roomId}</td><td>${t.task}</td><td style="color:${t.priority==='Urgent'?'var(--wine)':t.priority==='High'?'var(--brass)':'var(--ivory)'};">${t.priority}</td><td>${t.time}</td><td><span class="badge badge-${t.status==='Done'?'available':'checked'}">${t.status}</span></td></tr>`).join('')}</tbody></table>`;
+  }
+
+  // ── Finances ──
+  let expenses = JSON.parse(localStorage.getItem('gv-expenses') || '[]');
+
+  window.addExpense = function() {
+    const desc = document.getElementById('expDesc').value.trim();
+    const amount = parseFloat(document.getElementById('expAmount').value);
+    const category = document.getElementById('expCategory').value;
+    const msg = document.getElementById('expMsg');
+    if (!desc || isNaN(amount) || amount <= 0) { msg.innerHTML = '<div class="msg err">Enter a description and valid amount.</div>'; return; }
+    expenses.unshift({ id: 'EXP' + Date.now(), desc, amount, category, date: new Date().toLocaleDateString() });
+    localStorage.setItem('gv-expenses', JSON.stringify(expenses));
+    document.getElementById('expDesc').value = '';
+    document.getElementById('expAmount').value = '';
+    msg.innerHTML = '<div class="msg ok">Expense recorded</div>';
+    renderFinances();
+  };
+
+  window.deleteExpense = function(id) {
+    expenses = expenses.filter(e => e.id !== id);
+    localStorage.setItem('gv-expenses', JSON.stringify(expenses));
+    renderFinances();
+  };
+
+  function renderFinances() {
+    const occupied = inventory.filter(r => r.checkedIn);
+    const roomRevenue = occupied.reduce((s,r)=>s+roomCharges(r),0);
+    const restRevenue = occupied.reduce((s,r)=>s+restaurantCharges(r),0);
+    const revenue = roomRevenue + restRevenue;
+    const totalExpenses = expenses.reduce((s,e)=>s+e.amount,0);
+    const net = revenue - totalExpenses;
+
+    document.getElementById('financeGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-num" style="color:var(--sage);">${money(revenue)}</div><div class="stat-label">Total Revenue</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--wine);">${money(totalExpenses)}</div><div class="stat-label">Total Expenses</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:${net >= 0 ? 'var(--sage)' : 'var(--wine)'};">${money(net)}</div><div class="stat-label">Net Profit</div></div>
+      <div class="stat-card"><div class="stat-num">${expenses.length}</div><div class="stat-label">Expense Entries</div></div>
+    `;
+
+    document.getElementById('expenseTable').innerHTML = expenses.length ? `
+      <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th></th></tr></thead>
+      <tbody>
+        ${expenses.map(e => `<tr><td>${e.date}</td><td>${e.desc}</td><td><span class="badge badge-available">${e.category}</span></td><td>${money(e.amount)}</td><td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">Delete</button></td></tr>`).join('')}
+      </tbody>
+    ` : '<tr><td colspan="5" style="text-align:center;color:rgba(243,237,224,0.5);">No expenses recorded.</td></tr>';
   }
 
   // ── Concierge ──
