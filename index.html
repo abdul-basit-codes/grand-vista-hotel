@@ -701,6 +701,7 @@
       if (tab.dataset.panel === 'loyalty') renderLoyalty();
       if (tab.dataset.panel === 'guestDir') renderGuestDir();
       if (tab.dataset.panel === 'maintenance') renderMaintenance();
+      if (tab.dataset.panel === 'housekeeping') { populateHousekeepingRooms(); renderHousekeeping(); }
     });
   });
 
@@ -955,7 +956,9 @@
   }
 
   // ── Housekeeping ──
-  let housekeepingTasks = [];
+  let housekeepingTasks = JSON.parse(localStorage.getItem('gv-housekeeping') || '[]');
+
+  function saveHousekeeping() { localStorage.setItem('gv-housekeeping', JSON.stringify(housekeepingTasks)); }
 
   function populateHousekeepingRooms() {
     const sel = document.getElementById('hkRoom');
@@ -981,7 +984,19 @@
       roomId, task, priority, status: 'Pending',
       time: new Date().toLocaleTimeString()
     });
+    saveHousekeeping();
     msg.innerHTML = '<div class="msg ok">Housekeeping task assigned to ' + roomId + '</div>';
+    renderHousekeeping();
+  };
+
+  window.toggleHousekeeping = function(id) {
+    const t = housekeepingTasks.find(x => x.id === id);
+    if (t) { t.status = t.status === 'Done' ? 'Pending' : 'Done'; saveHousekeeping(); renderHousekeeping(); }
+  };
+
+  window.deleteHousekeeping = function(id) {
+    housekeepingTasks = housekeepingTasks.filter(t => t.id !== id);
+    saveHousekeeping();
     renderHousekeeping();
   };
 
@@ -991,7 +1006,7 @@
       container.innerHTML = '<div class="empty-state" style="color:var(--ivory);"><i class="fa-solid fa-broom"></i><p>No housekeeping tasks</p></div>';
       return;
     }
-    container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Task</th><th>Priority</th><th>Time</th><th>Status</th></tr></thead><tbody>${housekeepingTasks.map(t => `<tr><td>${t.id}</td><td>${t.roomId}</td><td>${t.task}</td><td style="color:${t.priority==='Urgent'?'var(--wine)':t.priority==='High'?'var(--brass)':'var(--ivory)'};">${t.priority}</td><td>${t.time}</td><td><span class="badge badge-${t.status==='Done'?'available':'checked'}">${t.status}</span></td></tr>`).join('')}</tbody></table>`;
+    container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Task</th><th>Priority</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead><tbody>${housekeepingTasks.map(t => `<tr><td>${t.id}</td><td>${t.roomId}</td><td>${t.task}</td><td style="color:${t.priority==='Urgent'?'var(--wine)':t.priority==='High'?'var(--brass)':'var(--ivory)'};">${t.priority}</td><td>${t.time}</td><td><span class="badge badge-${t.status==='Done'?'available':'checked'}">${t.status}</span></td><td><button class="btn btn-sm btn-primary" onclick="toggleHousekeeping('${t.id}')">${t.status==='Done'?'Reopen':'Complete'}</button> <button class="btn btn-sm btn-danger" onclick="deleteHousekeeping('${t.id}')">Del</button></td></tr>`).join('')}</tbody></table>`;
   }
 
   // ── Finances ──
