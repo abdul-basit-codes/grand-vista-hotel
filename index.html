@@ -359,6 +359,7 @@
   <section class="panel" id="summary">
     <p class="panel-title">Hotel Operations Summary</p>
     <p class="panel-sub">Live revenue and occupancy statistics.</p>
+    <button class="btn btn-primary" style="margin-bottom:16px;" onclick="exportOperations()"><i class="fa-solid fa-file-csv"></i> Export Operations CSV</button>
     <div class="stat-grid" id="statGrid"></div>
     <div style="overflow-x:auto;">
       <table id="catTable"><tbody></tbody></table>
@@ -1002,6 +1003,60 @@
       </tbody>
     `;
   }
+
+  window.exportOperations = function() {
+    const csvEscape = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    let out = [];
+
+    out.push('GRAND VISTA HOTEL - OPERATIONS EXPORT');
+    out.push('Generated,' + new Date().toLocaleString());
+    out.push('');
+
+    out.push('=== OCCUPIED GUESTS ===');
+    out.push(['Room','Category','Guest','Phone','Check-In','Check-Out','Nights','Room Charges','Restaurant','Total'].map(csvEscape).join(','));
+    inventory.filter(r => r.checkedIn).forEach(r => {
+      out.push([r.roomNumber, r.category, r.guestName, r.guestPhone || '', r.checkInDate, r.checkOutDate, r.daysBooked, roomCharges(r), restaurantCharges(r), totalCharges(r)].map(csvEscape).join(','));
+    });
+    out.push('');
+
+    out.push('=== RESTAURANT ORDERS ===');
+    out.push(['Room','Item','Qty','Unit Price','Line Total'].map(csvEscape).join(','));
+    inventory.filter(r => r.orders && r.orders.length).forEach(r => {
+      r.orders.forEach(o => out.push([r.roomNumber, o.itemName, o.qty, o.unitPrice, o.qty * o.unitPrice].map(csvEscape).join(',')));
+    });
+    out.push('');
+
+    out.push('=== EXPENSES ===');
+    out.push(['Date','Description','Category','Amount'].map(csvEscape).join(','));
+    expenses.forEach(e => out.push([e.date, e.desc, e.category, e.amount].map(csvEscape).join(',')));
+    out.push('');
+
+    out.push('=== HOUSEKEEPING ===');
+    out.push(['ID','Room','Task','Priority','Time','Status'].map(csvEscape).join(','));
+    housekeepingTasks.forEach(t => out.push([t.id, t.roomId, t.task, t.priority, t.time, t.status].map(csvEscape).join(',')));
+    out.push('');
+
+    out.push('=== MAINTENANCE ===');
+    out.push(['ID','Room','Issue','Priority','Date','Status'].map(csvEscape).join(','));
+    maintenanceLog.forEach(m => out.push([m.id, m.room, m.issue, m.priority, m.date, m.status].map(csvEscape).join(',')));
+    out.push('');
+
+    out.push('=== EVENTS ===');
+    out.push(['Event','Contact','Date','Time','Venue','Guests','Package','Status'].map(csvEscape).join(','));
+    events.forEach(e => out.push([e.name, e.contact, e.date, e.start + '-' + e.end, e.venue, e.guests || 0, e.pkg || 0, e.status].map(csvEscape).join(',')));
+    out.push('');
+
+    out.push('=== FEEDBACK ===');
+    out.push(['Room','Name','Rating','Comment','Date'].map(csvEscape).join(','));
+    feedbacks.forEach(f => out.push([f.roomId, f.name, f.rating, f.comment, f.date].map(csvEscape).join(',')));
+    out.push('');
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([out.join('\n')], { type: 'text/csv' }));
+    a.download = 'grand-vista-operations-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    toast('Operations CSV exported', 'success');
+  };
 
   // ── Housekeeping ──
   let housekeepingTasks = JSON.parse(localStorage.getItem('gv-housekeeping') || '[]');
