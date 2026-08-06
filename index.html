@@ -272,6 +272,7 @@
   <button class="tab" data-panel="guestDir"><i class="fa-solid fa-address-book"></i> Guests</button>
   <button class="tab" data-panel="maintenance"><i class="fa-solid fa-wrench"></i> Maintenance</button>
   <button class="tab" data-panel="roomReviews"><i class="fa-solid fa-star"></i> Reviews</button>
+  <button class="tab" data-panel="events"><i class="fa-solid fa-calendar-days"></i> Events</button>
 </nav>
 
 <main>
@@ -543,6 +544,52 @@
     <div id="guestDirBody"></div>
   </section>
 
+  <!-- EVENTS -->
+  <section class="panel" id="events">
+    <p class="panel-title">Events & Reservations</p>
+    <p class="panel-sub">Banquets, meetings, and event room bookings</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Event Name</label>
+        <input type="text" id="evtName" placeholder="e.g. Corporate Dinner">
+      </div>
+      <div class="field">
+        <label>Contact</label>
+        <input type="text" id="evtContact" placeholder="Client name / phone">
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="evtDate">
+      </div>
+      <div class="field">
+        <label>Start - End</label>
+        <input type="time" id="evtStart" value="18:00">
+        <input type="time" id="evtEnd" value="22:00">
+      </div>
+      <div class="field">
+        <label>Venue</label>
+        <select id="evtVenue">
+          <option value="Grand Ballroom">Grand Ballroom</option>
+          <option value="Garden Terrace">Garden Terrace</option>
+          <option value="Boardroom A">Boardroom A</option>
+          <option value="Boardroom B">Boardroom B</option>
+          <option value="Poolside">Poolside</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Guests</label>
+        <input type="number" id="evtGuests" placeholder="Expected attendees" min="1">
+      </div>
+      <div class="field">
+        <label>Package ($)</label>
+        <input type="number" id="evtPackage" placeholder="e.g. 500" min="0">
+      </div>
+      <button class="btn btn-primary" onclick="addEvent()"><i class="fa-solid fa-calendar-plus"></i> Book Event</button>
+      <div id="evtMsg"></div>
+    </div>
+    <div id="eventsBody"></div>
+  </section>
+
   <!-- MAINTENANCE -->
   <section class="panel" id="maintenance">
     <p class="panel-title">Maintenance Log</p>
@@ -702,6 +749,7 @@
       if (tab.dataset.panel === 'guestDir') renderGuestDir();
       if (tab.dataset.panel === 'maintenance') renderMaintenance();
       if (tab.dataset.panel === 'housekeeping') { populateHousekeepingRooms(); renderHousekeeping(); }
+      if (tab.dataset.panel === 'events') renderEvents();
     });
   });
 
@@ -1006,7 +1054,7 @@
       container.innerHTML = '<div class="empty-state" style="color:var(--ivory);"><i class="fa-solid fa-broom"></i><p>No housekeeping tasks</p></div>';
       return;
     }
-    container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Task</th><th>Priority</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead><tbody>${housekeepingTasks.map(t => `<tr><td>${t.id}</td><td>${t.roomId}</td><td>${t.task}</td><td style="color:${t.priority==='Urgent'?'var(--wine)':t.priority==='High'?'var(--brass)':'var(--ivory)'};">${t.priority}</td><td>${t.time}</td><td><span class="badge badge-${t.status==='Done'?'available':'checked'}">${t.status}</span></td><td><button class="btn btn-sm btn-primary" onclick="toggleHousekeeping('${t.id}')">${t.status==='Done'?'Reopen':'Complete'}</button> <button class="btn btn-sm btn-danger" onclick="deleteHousekeeping('${t.id}')">Del</button></td></tr>`).join('')}</tbody></table>`;
+    container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Task</th><th>Priority</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead><tbody>${housekeepingTasks.map(t => `<tr><td>${t.id}</td><td>${t.roomId}</td><td>${t.task}</td><td style="color:${t.priority==='Urgent'?'var(--wine)':t.priority==='High'?'var(--brass)':'var(--ivory)'};">${t.priority}</td><td>${t.time}</td><td><span class="badge badge-${t.status==='Done'?'available':'checked'}">${t.status}</span></td><td><button class="btn small" onclick="toggleHousekeeping('${t.id}')">${t.status==='Done'?'Reopen':'Complete'}</button> <button class="btn small danger" onclick="deleteHousekeeping('${t.id}')">Del</button></td></tr>`).join('')}</tbody></table>`;
   }
 
   // ── Finances ──
@@ -1230,6 +1278,50 @@
     document.getElementById('maintIssue').value = '';
     renderMaintenance();
   };
+
+  // ── Events & Reservations ──
+  let events = JSON.parse(localStorage.getItem('gv-events') || '[]');
+
+  window.addEvent = function() {
+    const name = document.getElementById('evtName').value.trim();
+    const contact = document.getElementById('evtContact').value.trim();
+    const date = document.getElementById('evtDate').value;
+    const start = document.getElementById('evtStart').value;
+    const end = document.getElementById('evtEnd').value;
+    const venue = document.getElementById('evtVenue').value;
+    const guests = parseInt(document.getElementById('evtGuests').value);
+    const pkg = parseFloat(document.getElementById('evtPackage').value);
+    const msg = document.getElementById('evtMsg');
+    if (!name || !date) { msg.innerHTML = '<div class="msg err">Enter an event name and date.</div>'; return; }
+
+    events.unshift({ id: 'EVT' + Date.now(), name, contact, date, start, end, venue, guests: isNaN(guests) ? 0 : guests, pkg: isNaN(pkg) ? 0 : pkg, status: 'Confirmed' });
+    localStorage.setItem('gv-events', JSON.stringify(events));
+    msg.innerHTML = '<div class="msg ok">Event booked</div>';
+    document.getElementById('evtName').value = '';
+    document.getElementById('evtContact').value = '';
+    document.getElementById('evtDate').value = '';
+    document.getElementById('evtGuests').value = '';
+    document.getElementById('evtPackage').value = '';
+    renderEvents();
+  };
+
+  window.toggleEventStatus = function(id) {
+    const e = events.find(x => x.id === id);
+    if (e) { e.status = e.status === 'Cancelled' ? 'Confirmed' : 'Cancelled'; localStorage.setItem('gv-events', JSON.stringify(events)); renderEvents(); }
+  };
+
+  window.deleteEvent = function(id) {
+    events = events.filter(e => e.id !== id);
+    localStorage.setItem('gv-events', JSON.stringify(events));
+    renderEvents();
+  };
+
+  function renderEvents() {
+    const container = document.getElementById('eventsBody');
+    if (!container) return;
+    if (!events.length) { container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-days"></i><p>No events booked yet.</p></div>'; return; }
+    container.innerHTML = `<table><thead><tr><th>Event</th><th>Contact</th><th>Date</th><th>Time</th><th>Venue</th><th>Guests</th><th>Package</th><th>Status</th><th></th></tr></thead><tbody>${events.map(e => `<tr><td>${e.name}</td><td>${e.contact || '-'}</td><td>${e.date}</td><td>${e.start} - ${e.end}</td><td>${e.venue}</td><td>${e.guests || 0}</td><td>${money(e.pkg || 0)}</td><td><span class="badge badge-${e.status === 'Cancelled' ? 'checked' : 'available'}">${e.status}</span></td><td><button class="btn small" onclick="toggleEventStatus('${e.id}')">${e.status === 'Cancelled' ? 'Reconfirm' : 'Cancel'}</button> <button class="btn small danger" onclick="deleteEvent('${e.id}')">Del</button></td></tr>`).join('')}</tbody></table>`;
+  }
 
   function renderMaintenance() {
     const container = document.getElementById('maintenanceBody');
