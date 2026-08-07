@@ -273,6 +273,9 @@
   <button class="tab" data-panel="maintenance"><i class="fa-solid fa-wrench"></i> Maintenance</button>
   <button class="tab" data-panel="roomReviews"><i class="fa-solid fa-star"></i> Reviews</button>
   <button class="tab" data-panel="events"><i class="fa-solid fa-calendar-days"></i> Events</button>
+  <button class="tab" data-panel="parking"><i class="fa-solid fa-square-parking"></i> Parking</button>
+  <button class="tab" data-panel="laundry"><i class="fa-solid fa-shirt"></i> Laundry</button>
+  <button class="tab" data-panel="hotelSettings"><i class="fa-solid fa-gear"></i> Settings</button>
 </nav>
 
 <main>
@@ -613,6 +616,79 @@
     </div>
     <div id="maintenanceBody"></div>
   </section>
+
+  <!-- PARKING -->
+  <section class="panel" id="parking">
+    <p class="panel-title">Parking Management</p>
+    <p class="panel-sub">Assign parking slots to checked-in guests</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Occupied Room</label>
+        <select id="pkRoom"></select>
+      </div>
+      <button class="btn btn-primary" onclick="assignParking()"><i class="fa-solid fa-square-parking"></i> Assign Slot</button>
+      <div id="pkMsg"></div>
+    </div>
+    <div id="parkingBody"></div>
+  </section>
+
+  <!-- LAUNDRY -->
+  <section class="panel" id="laundry">
+    <p class="panel-title">Laundry Service</p>
+    <p class="panel-sub">Track guest laundry requests from pickup to delivery</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Room</label>
+        <select id="ldRoom"></select>
+      </div>
+      <div class="field">
+        <label>Item</label>
+        <input type="text" id="ldItem" placeholder="e.g. 5 shirts, 2 suits">
+      </div>
+      <div class="field">
+        <label>Service</label>
+        <select id="ldType">
+          <option value="Wash & Fold">Wash & Fold</option>
+          <option value="Dry Cleaning">Dry Cleaning</option>
+          <option value="Ironing">Ironing</option>
+          <option value="Express">Express</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Charge ($)</label>
+        <input type="number" id="ldCharge" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <button class="btn btn-primary" onclick="addLaundry()"><i class="fa-solid fa-shirt"></i> Submit Request</button>
+      <div id="ldMsg"></div>
+    </div>
+    <div id="laundryBody"></div>
+  </section>
+
+  <!-- HOTEL SETTINGS -->
+  <section class="panel" id="hotelSettings">
+    <p class="panel-title">Hotel Settings</p>
+    <p class="panel-sub">Customize currency, taxes, and reset demo data</p>
+    <div class="form-card" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Currency Symbol</label>
+        <input type="text" id="stCurrency" maxlength="4" placeholder="$">
+      </div>
+      <div class="field">
+        <label>Tax Rate (%)</label>
+        <input type="number" id="stTax" min="0" max="40" step="0.5" placeholder="5">
+      </div>
+      <div class="field">
+        <label>Property Name</label>
+        <input type="text" id="stName" placeholder="Grand Vista Hotel">
+      </div>
+      <button class="btn btn-primary" onclick="saveSettings()"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+      <div id="stMsg"></div>
+    </div>
+    <div class="form-card">
+      <p style="font-size:13px;color:var(--ivory);opacity:.8;margin-bottom:10px;">Danger zone</p>
+      <button class="btn danger" onclick="resetAllData()"><i class="fa-solid fa-trash-can"></i> Reset All Data</button>
+    </div>
+  </section>
 </main>
 
 <!-- Receipt Modal -->
@@ -718,7 +794,7 @@
   function findRoom(num) { return inventory.find(r => r.roomNumber === Number(num)); }
   function today() { return new Date().toISOString().slice(0,10); }
   function addDays(days) { const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
-  function money(n) { return '$' + n.toFixed(2); }
+  function money(n) { return settings.currency + n.toFixed(2); }
   function roomCharges(r) { return r.price * r.daysBooked; }
   function restaurantCharges(r) { return (r.orders||[]).reduce((s,o)=>s+o.qty*o.unitPrice,0); }
   function totalCharges(r) { return roomCharges(r) + restaurantCharges(r); }
@@ -751,6 +827,9 @@
       if (tab.dataset.panel === 'maintenance') renderMaintenance();
       if (tab.dataset.panel === 'housekeeping') { populateHousekeepingRooms(); renderHousekeeping(); }
       if (tab.dataset.panel === 'events') renderEvents();
+      if (tab.dataset.panel === 'parking') { populateParkingRooms(); renderParking(); }
+      if (tab.dataset.panel === 'laundry') { populateLaundryRooms(); renderLaundry(); }
+      if (tab.dataset.panel === 'hotelSettings') loadSettings();
     });
   });
 
@@ -1415,6 +1494,109 @@
     toast('Contacts exported');
   };
 
+  // ── Parking Management ──
+  const PARKING_SLOTS = ['P1','P2','P3','P4','P5','P6','P7','P8','P9','P10','P11','P12','P13','P14','P15'];
+  let parking = JSON.parse(localStorage.getItem('gv-parking') || '[]');
+
+  function saveParking() { localStorage.setItem('gv-parking', JSON.stringify(parking)); }
+
+  function populateParkingRooms() {
+    const sel = document.getElementById('pkRoom');
+    if (!sel) return;
+    const occupied = inventory.filter(r => r.checkedIn);
+    sel.innerHTML = occupied.map(r => '<option value="' + r.roomNumber + '">Room ' + r.roomNumber + ' — ' + r.guestName + '</option>').join('');
+  }
+
+  function freeSlots() { return PARKING_SLOTS.filter(s => !parking.find(p => p.slot === s)); }
+
+  window.assignParking = function() {
+    const roomNum = document.getElementById('pkRoom').value;
+    const msg = document.getElementById('pkMsg');
+    if (!roomNum) { msg.innerHTML = '<div class="msg err">Select an occupied room.</div>'; return; }
+    if (parking.find(p => p.roomNum === roomNum)) { msg.innerHTML = '<div class="msg err">This room already has a parking slot.</div>'; return; }
+    const free = freeSlots();
+    if (!free.length) { msg.innerHTML = '<div class="msg err">All parking slots are occupied.</div>'; return; }
+    const room = inventory.find(r => r.roomNumber === Number(roomNum));
+    parking.push({ slot: free[0], roomNum: String(roomNum), guest: room ? room.guestName : '', date: today() });
+    saveParking();
+    msg.innerHTML = '<div class="msg ok">Assigned ' + free[0] + ' to Room ' + roomNum + '</div>';
+    renderParking();
+  };
+
+  window.freeParking = function(slot) {
+    parking = parking.filter(p => p.slot !== slot);
+    saveParking();
+    renderParking();
+    toast('Slot ' + slot + ' released');
+  };
+
+  function renderParking() {
+    const container = document.getElementById('parkingBody');
+    if (!container) return;
+    const grid = PARKING_SLOTS.map(s => {
+      const p = parking.find(x => x.slot === s);
+      if (p) {
+        return '<div style="border:1px solid var(--wine);background:rgba(193,89,79,0.12);border-radius:8px;padding:10px;text-align:center;">' +
+          '<div style="font-family:\'Fraunces\';font-size:15px;color:var(--wine);font-weight:600;">' + s + '</div>' +
+          '<div style="font-size:11px;color:var(--ivory);margin:4px 0;">' + p.guest + '</div>' +
+          '<button class="btn small" onclick="freeParking(\'' + s + '\')" style="font-size:10px;">Release</button></div>';
+      }
+      return '<div style="border:1px dashed var(--sage);background:rgba(107,158,120,0.06);border-radius:8px;padding:10px;text-align:center;color:var(--sage);">' +
+        '<div style="font-family:\'Fraunces\';font-size:15px;font-weight:600;">' + s + '</div><div style="font-size:10px;margin-top:4px;">FREE</div></div>';
+    }).join('');
+    container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;">' + grid + '</div>' +
+      '<p style="font-size:12px;color:var(--ivory);opacity:.6;margin-top:10px;">' + parking.length + '/' + PARKING_SLOTS.length + ' slots in use</p>';
+  }
+
+  // ── Laundry Service ──
+  let laundry = JSON.parse(localStorage.getItem('gv-laundry') || '[]');
+
+  function saveLaundry() { localStorage.setItem('gv-laundry', JSON.stringify(laundry)); }
+
+  function populateLaundryRooms() {
+    const sel = document.getElementById('ldRoom');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Select room…</option>' + inventory.filter(r => r.checkedIn).map(r => '<option value="' + r.roomNumber + '">Room ' + r.roomNumber + ' — ' + r.guestName + '</option>').join('');
+  }
+
+  window.addLaundry = function() {
+    const roomNum = document.getElementById('ldRoom').value;
+    const item = document.getElementById('ldItem').value.trim();
+    const type = document.getElementById('ldType').value;
+    const charge = parseFloat(document.getElementById('ldCharge').value);
+    const msg = document.getElementById('ldMsg');
+    if (!roomNum || !item) { msg.innerHTML = '<div class="msg err">Select a room and describe the items.</div>'; return; }
+    const room = inventory.find(r => r.roomNumber === Number(roomNum));
+    laundry.unshift({ id: 'LD' + Date.now(), roomNum: String(roomNum), guest: room ? room.guestName : '', item, type, charge: isNaN(charge) ? 0 : charge, status: 'Submitted', date: today() });
+    saveLaundry();
+    msg.innerHTML = '<div class="msg ok">Laundry request submitted</div>';
+    document.getElementById('ldItem').value = '';
+    document.getElementById('ldCharge').value = '';
+    renderLaundry();
+  };
+
+  window.advanceLaundry = function(id) {
+    const flow = ['Submitted', 'In Progress', 'Ready', 'Delivered'];
+    const l = laundry.find(x => x.id === id);
+    if (!l) return;
+    const next = flow[flow.indexOf(l.status) + 1];
+    if (next) { l.status = next; saveLaundry(); renderLaundry(); }
+  };
+
+  window.deleteLaundry = function(id) {
+    laundry = laundry.filter(l => l.id !== id);
+    saveLaundry();
+    renderLaundry();
+  };
+
+  function renderLaundry() {
+    const container = document.getElementById('laundryBody');
+    if (!container) return;
+    if (!laundry.length) { container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-shirt"></i><p>No laundry requests yet.</p></div>'; return; }
+    const color = { Submitted: 'var(--brass)', 'In Progress': 'var(--sage)', Ready: 'var(--sage)', Delivered: 'var(--ivory)' };
+    container.innerHTML = `<table><thead><tr><th>ID</th><th>Room</th><th>Item</th><th>Service</th><th>Charge</th><th>Status</th><th>Date</th><th></th></tr></thead><tbody>${laundry.map(l => `<tr><td>${l.id}</td><td>${l.roomNum}</td><td>${l.item}</td><td>${l.type}</td><td>${money(l.charge)}</td><td style="color:${color[l.status] || 'var(--ivory)'};font-weight:600;">${l.status}</td><td>${l.date}</td><td><button class="btn small" onclick="advanceLaundry('${l.id}')" ${l.status === 'Delivered' ? 'disabled' : ''}>Advance</button> <button class="btn small danger" onclick="deleteLaundry('${l.id}')">Del</button></td></tr>`).join('')}</tbody></table>`;
+  }
+
   // ── Room Reviews Summary ──
   function renderRoomReviews() {
     const container = document.getElementById('roomReviewsBody');
@@ -1463,6 +1645,36 @@
       return `<tr><td>${r.guestName}</td><td>${r.roomNumber}</td><td style="font-weight:600;">${points}</td><td style="color:${tier.color};font-weight:600;">${tier.label}</td><td>${reward}</td></tr>`;
     }).join('')}</tbody></table>`;
   }
+
+  // ── Hotel Settings ──
+  let settings = JSON.parse(localStorage.getItem('gv-settings') || '{}');
+  settings = Object.assign({ currency: '$', tax: 5, name: 'Grand Vista Hotel' }, settings);
+
+  function loadSettings() {
+    document.getElementById('stCurrency').value = settings.currency;
+    document.getElementById('stTax').value = settings.tax;
+    document.getElementById('stName').value = settings.name;
+  }
+
+  window.saveSettings = function() {
+    const currency = document.getElementById('stCurrency').value.trim() || '$';
+    const tax = parseFloat(document.getElementById('stTax').value);
+    const name = document.getElementById('stName').value.trim() || 'Grand Vista Hotel';
+    settings.currency = currency;
+    settings.tax = isNaN(tax) ? 5 : tax;
+    settings.name = name;
+    localStorage.setItem('gv-settings', JSON.stringify(settings));
+    document.getElementById('stMsg').innerHTML = '<div class="msg ok">Settings saved</div>';
+    document.title = name + ' — Front Desk';
+    toast('Settings saved');
+  };
+
+  window.resetAllData = function() {
+    if (!confirm('This will permanently delete all hotel data. Continue?')) return;
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('gv-'));
+    keys.forEach(k => localStorage.removeItem(k));
+    location.reload();
+  };
 
   // ── Keyboard shortcuts ──
   document.addEventListener('keydown', function(e) {
